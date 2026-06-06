@@ -1,0 +1,17 @@
+# Raw / intermediate data (large, reproducible via pipeline)
+data/raw/
+data/tmp/
+*.geojson
+!docs/data/*.geojson
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# build log
+data/build.log
