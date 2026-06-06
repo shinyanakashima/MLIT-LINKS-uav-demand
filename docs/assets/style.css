@@ -6,10 +6,10 @@
   --text: #e6edf3;
   --muted: #9aa7b4;
   --accent: #4ea1ff;
-  --survey: #2f9e6e;     /* 測量 */
-  --infra: #e8853a;      /* インフラ点検・保守 */
-  --maint: #9b6dd6;      /* 設備メンテナンス */
-  --all: #4ea1ff;
+  --survey: #1f9e5e;     /* 測量 */
+  --infra: #e8730c;      /* インフラ点検・保守 */
+  --maint: #8b3fd6;      /* 設備メンテナンス */
+  --all: #2563eb;
 }
 
 * { box-sizing: border-box; }
@@ -93,18 +93,31 @@ footer.notes a { color: var(--accent); }
 .legend-min { font-size: 11px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .legend-min i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 4px; }
 
-/* Map legend */
-.map-legend {
-  background: rgba(26,33,43,.95); border: 1px solid var(--line); border-radius: 8px;
-  padding: 8px 10px; font-size: 11px; color: var(--text); line-height: 1.7;
+/* 背景地図の切り替え */
+#basemap-switch {
+  position: absolute; top: 12px; left: 50px; z-index: 1000;
+  display: flex; gap: 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.3);
 }
-.map-legend .circles { display: flex; align-items: flex-end; gap: 8px; margin-top: 4px; }
-.map-legend .ring { border: 1.5px solid var(--muted); border-radius: 50%; }
+#basemap-switch button {
+  background: var(--panel); color: var(--text); border: none; cursor: pointer;
+  padding: 7px 12px; font-size: 12px; font-weight: 600;
+}
+#basemap-switch button + button { border-left: 1px solid var(--line); }
+#basemap-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 
-.leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); }
-.leaflet-popup-tip { background: var(--panel); }
-.leaflet-popup-content { margin: 10px 12px; font-size: 12.5px; }
-.leaflet-popup-content b { font-size: 13px; }
+/* MapLibre のポップアップ・帰属表示をダークテーマに合わせる */
+.maplibregl-popup-content {
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 12px; font-size: 12.5px; box-shadow: 0 4px 18px rgba(0,0,0,.4);
+}
+.maplibregl-popup-content b { font-size: 13px; }
+.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--panel); }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--panel); }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--panel); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--panel); }
+.maplibregl-ctrl-attrib { font-size: 10.5px; }
 
 #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1500; color: var(--muted); background: var(--bg); }
 

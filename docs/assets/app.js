@@ -1,24 +1,32 @@
 /* 測量・インフラ点検ドローン需要マップ
  * 出典：国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』を加工して作成
- * 依存は Leaflet のみ。集計済み JSON（docs/data/*.json）を読み込んで描画する。
+ * 地図: MapLibre GL JS。背景地図: 地理院タイル（標準地図 / 衛星写真）。いずれも
+ * クライアント側で完結し API キー不要のため GitHub Pages 単独で動作する。
  */
 "use strict";
 
 const USE = {
-  target: { label: "全ターゲット用途", color: "#4ea1ff" },
-  survey: { label: "測量", color: "#2f9e6e" },
-  infra:  { label: "インフラ点検・保守", color: "#e8853a" },
-  maint:  { label: "設備メンテナンス", color: "#9b6dd6" },
+  target: { label: "全ターゲット用途", color: "#2563eb" },
+  survey: { label: "測量", color: "#1f9e5e" },
+  infra:  { label: "インフラ点検・保守", color: "#e8730c" },
+  maint:  { label: "設備メンテナンス", color: "#8b3fd6" },
 };
+
+const GSI = {
+  std:   { tiles: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png" },
+  photo: { tiles: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg" },
+};
+const GSI_ATTR =
+  '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>' +
+  '｜出典：国土交通省 Project LINKS';
 
 const state = {
   use: "target",
+  base: "std",
   munis: [],
   prefs: [],
   meta: null,
   map: null,
-  layer: null,
-  selected: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -40,49 +48,46 @@ function dominantUse(m) {
 
 function radius(v, max) {
   if (v <= 0) return 0;
-  const r = 22 * Math.sqrt(v / max);
-  return Math.max(4, r);
+  return Math.max(4, 26 * Math.sqrt(v / max));
 }
 
-function renderMap() {
-  if (state.layer) state.layer.remove();
+// 選択中の用途に応じた GeoJSON を組み立てる（円の半径・色を property に焼き込む）。
+function buildFeatures() {
   const use = state.use;
   const vals = state.munis.map((m) => m[use]).filter((v) => v > 0);
   const max = vals.length ? Math.max(...vals) : 1;
-  const markers = [];
-  for (const m of state.munis) {
+  const feats = [];
+  state.munis.forEach((m, idx) => {
     const v = m[use];
-    if (!v) continue;
+    if (!v) return;
     const color = use === "target" ? USE[dominantUse(m)].color : USE[use].color;
-    const c = L.circleMarker([m.lat, m.lon], {
-      radius: radius(v, max),
-      color: color, weight: 1, fillColor: color, fillOpacity: 0.55,
+    feats.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [m.lon, m.lat] },
+      properties: { idx, v, r: radius(v, max), color, name: m.name, sk: -v },
     });
-    c.bindPopup(
-      `<b>${m.name}</b><br>${USE[use].label}：${fmt(v)} 件（申請）` +
-      `<br><span style="color:#9aa7b4">クリックで詳細</span>`
-    );
-    c.on("click", () => showDetail(m));
-    markers.push(c);
+  });
+  return { type: "FeatureCollection", features: feats };
+}
+
+function refreshLayer() {
+  if (state.map.getSource("munis")) {
+    state.map.getSource("munis").setData(buildFeatures());
   }
-  state.layer = L.layerGroup(markers).addTo(state.map);
 }
 
 function renderMetrics() {
   const use = state.use;
   let total = 0, munis = 0;
-  for (const m of state.munis) { if (m[use] > 0) { total += m[use]; munis++; } }
+  for (const m of state.munis) if (m[use] > 0) { total += m[use]; munis++; }
   $("m-records").textContent = fmt(total);
   $("m-munis").textContent = fmt(munis);
 }
 
 function renderRanks() {
   const use = state.use;
-  // 都道府県
   const prefs = state.prefs
-    .filter((p) => p[use] > 0)
-    .sort((a, b) => b[use] - a[use])
-    .slice(0, 12);
+    .filter((p) => p[use] > 0).sort((a, b) => b[use] - a[use]).slice(0, 12);
   const pmax = prefs.length ? prefs[0][use] : 1;
   $("pref-rank").innerHTML = prefs.map((p) => `
     <li data-pref="${p.pref}">
@@ -93,11 +98,8 @@ function renderRanks() {
     li.onclick = () => zoomPref(li.dataset.pref);
   });
 
-  // 市区町村
   const munis = state.munis
-    .filter((m) => m[use] > 0)
-    .sort((a, b) => b[use] - a[use])
-    .slice(0, 20);
+    .filter((m) => m[use] > 0).sort((a, b) => b[use] - a[use]).slice(0, 20);
   const mmax = munis.length ? munis[0][use] : 1;
   $("muni-rank").innerHTML = munis.map((m, i) => `
     <li data-i="${state.munis.indexOf(m)}">
@@ -106,7 +108,7 @@ function renderRanks() {
     </li>`).join("");
   $("muni-rank").querySelectorAll("li").forEach((li) => {
     const m = state.munis[+li.dataset.i];
-    li.onclick = () => { state.map.setView([m.lat, m.lon], 9); showDetail(m); };
+    li.onclick = () => { state.map.flyTo({ center: [m.lon, m.lat], zoom: 8 }); showDetail(m); };
   });
 }
 
@@ -123,7 +125,6 @@ function renderTrend(el, monthCounts, months) {
 }
 
 function showDetail(m) {
-  state.selected = m;
   $("d-name").textContent = m.city || m.name;
   $("d-pref").textContent = m.pref || "";
   $("d-target").textContent = fmt(m.target);
@@ -134,7 +135,6 @@ function showDetail(m) {
   $("d-m30").textContent = `${fmt(m.m30)}（${pct(m.m30, m.target)}）`;
   $("d-lic1").textContent = `${fmt(m.lic1)}（${pct(m.lic1, m.target)}）`;
   $("d-lic2").textContent = `${fmt(m.lic2)}（${pct(m.lic2, m.target)}）`;
-  // 用途構成バー（重複ありのため合計で正規化）
   const sum = m.survey + m.infra + m.maint || 1;
   $("d-compo").innerHTML =
     `<span style="width:${(100 * m.survey) / sum}%;background:var(--survey)"></span>` +
@@ -147,43 +147,86 @@ function showDetail(m) {
 function zoomPref(pref) {
   const pts = state.munis.filter((m) => m.pref === pref && m[state.use] > 0);
   if (!pts.length) return;
-  const b = L.latLngBounds(pts.map((m) => [m.lat, m.lon]));
-  state.map.fitBounds(b.pad(0.2));
+  const b = new maplibregl.LngLatBounds();
+  pts.forEach((m) => b.extend([m.lon, m.lat]));
+  state.map.fitBounds(b, { padding: 60, maxZoom: 9 });
 }
 
 function setUse(use) {
   state.use = use;
   document.querySelectorAll("#use-seg .use").forEach((b) =>
     b.setAttribute("aria-pressed", String(b.dataset.use === use)));
-  renderMap();
+  refreshLayer();
   renderMetrics();
   renderRanks();
 }
 
-function addLegend() {
-  const lg = L.control({ position: "bottomright" });
-  lg.onAdd = () => {
-    const d = L.DomUtil.create("div", "map-legend");
-    d.innerHTML =
-      "円の大きさ＝申請件数<div class='circles'>" +
-      "<span class='ring' style='width:10px;height:10px'></span>" +
-      "<span class='ring' style='width:20px;height:20px'></span>" +
-      "<span class='ring' style='width:32px;height:32px'></span></div>";
-    return d;
+function setBase(base) {
+  state.base = base;
+  state.map.setLayoutProperty("gsi-std", "visibility", base === "std" ? "visible" : "none");
+  state.map.setLayoutProperty("gsi-photo", "visibility", base === "photo" ? "visible" : "none");
+  document.querySelectorAll("#basemap-switch button").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.base === base)));
+  // 衛星写真は背景が暗いので円の縁取りを明るくする。
+  state.map.setPaintProperty("muni-circles", "circle-stroke-color",
+    base === "photo" ? "#ffffff" : "#1a212b");
+}
+
+function mapStyle() {
+  return {
+    version: 8,
+    sources: {
+      "gsi-std": { type: "raster", tiles: [GSI.std.tiles], tileSize: 256, maxzoom: 18, attribution: GSI_ATTR },
+      "gsi-photo": { type: "raster", tiles: [GSI.photo.tiles], tileSize: 256, maxzoom: 18, attribution: GSI_ATTR },
+    },
+    layers: [
+      { id: "gsi-std", type: "raster", source: "gsi-std", layout: { visibility: "visible" } },
+      { id: "gsi-photo", type: "raster", source: "gsi-photo", layout: { visibility: "none" } },
+    ],
   };
-  lg.addTo(state.map);
+}
+
+function addDataLayer() {
+  state.map.addSource("munis", { type: "geojson", data: buildFeatures() });
+  state.map.addLayer({
+    id: "muni-circles",
+    type: "circle",
+    source: "munis",
+    layout: { "circle-sort-key": ["get", "sk"] },
+    paint: {
+      "circle-radius": ["get", "r"],
+      "circle-color": ["get", "color"],
+      "circle-opacity": 0.6,
+      "circle-stroke-width": 0.9,
+      "circle-stroke-color": "#1a212b",
+      "circle-stroke-opacity": 0.7,
+    },
+  });
+
+  const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: true });
+  state.map.on("mouseenter", "muni-circles", () => { state.map.getCanvas().style.cursor = "pointer"; });
+  state.map.on("mouseleave", "muni-circles", () => { state.map.getCanvas().style.cursor = ""; popup.remove(); });
+  state.map.on("mousemove", "muni-circles", (e) => {
+    const f = e.features[0];
+    popup.setLngLat(f.geometry.coordinates)
+      .setHTML(`<b>${f.properties.name}</b><br>${USE[state.use].label}：${fmt(f.properties.v)} 件（申請）`)
+      .addTo(state.map);
+  });
+  state.map.on("click", "muni-circles", (e) => {
+    showDetail(state.munis[e.features[0].properties.idx]);
+  });
 }
 
 async function init() {
-  state.map = L.map("map", { preferCanvas: true, zoomControl: true })
-    .setView([37.5, 137.5], 5);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> ' +
-      '&copy; <a href="https://carto.com/attributions">CARTO</a>｜出典：国土交通省 Project LINKS',
-    subdomains: "abcd", maxZoom: 18,
-  }).addTo(state.map);
-  addLegend();
+  state.map = new maplibregl.Map({
+    container: "map",
+    style: mapStyle(),
+    center: [137.5, 37.8],
+    zoom: 4.4,
+    attributionControl: false,
+  });
+  state.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+  state.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
   try {
     const [meta, munis, prefs] = await Promise.all([
@@ -195,27 +238,31 @@ async function init() {
 
     $("src-note").innerHTML =
       `出典：<a href="${meta.source_url}" target="_blank" rel="noopener">` +
-      `国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』</a>を加工して作成。`;
-    const s = meta.stats;
-    const mp = meta.months_processed;
+      `国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』</a>を加工して作成。` +
+      `背景地図：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院（地理院タイル）</a>。`;
+    const s = meta.stats, mp = meta.months_processed;
+    const ymd = (m) => m.slice(0, 4) + "年" + (+m.slice(4, 6)) + "月";
     $("meta-note").innerHTML =
-      `対象期間：${mp[0] ? mp[0].slice(0,4)+"年"+(+mp[0].slice(4,6))+"月" : ""}〜` +
-      `${mp.length ? mp[mp.length-1].slice(0,4)+"年"+(+mp[mp.length-1].slice(4,6))+"月" : ""}` +
+      `対象期間：${mp.length ? ymd(mp[0]) : ""}〜${mp.length ? ymd(mp[mp.length - 1]) : ""}` +
       `（${mp.length}ヶ月）／走査 ${fmt(s.features_scanned)} 件中、` +
       `ターゲット用途 ${fmt(s.target_records)} 件、包括申請として除外 ${fmt(s.excluded_blanket)} 件。` +
-      `生成：${meta.generated.slice(0,10)}。`;
-
+      `生成：${meta.generated.slice(0, 10)}。`;
     renderTrend($("trend"), meta.month_target, meta.months_processed);
-    document.querySelectorAll("#use-seg .use").forEach((b) =>
-      b.onclick = () => setUse(b.dataset.use));
+
+    document.querySelectorAll("#use-seg .use").forEach((b) => b.onclick = () => setUse(b.dataset.use));
+    document.querySelectorAll("#basemap-switch button").forEach((b) => b.onclick = () => setBase(b.dataset.base));
     $("detail-close").onclick = () => $("detail").classList.remove("show");
 
-    setUse("target");
+    state.map.on("load", () => {
+      addDataLayer();
+      setBase("std");
+      $("loading").style.display = "none";
+    });
+    renderMetrics();
+    renderRanks();
   } catch (e) {
     $("loading").textContent = "データの読み込みに失敗しました: " + e.message;
-    return;
   }
-  $("loading").style.display = "none";
 }
 
 init();
