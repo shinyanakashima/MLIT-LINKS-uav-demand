@@ -31,6 +31,15 @@ header.brand { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
 header.brand h1 { font-size: 17px; margin: 0 0 4px; }
 header.brand p.sub { margin: 0; color: var(--muted); font-size: 12px; }
 
+#lang-switch { display: flex; justify-content: flex-end; gap: 0; margin-bottom: 8px; }
+#lang-switch button {
+  background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+  cursor: pointer; padding: 3px 10px; font-size: 11px; font-weight: 600;
+}
+#lang-switch button:first-child { border-radius: 6px 0 0 6px; }
+#lang-switch button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+#lang-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 .section { padding: 14px 18px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; text-transform: uppercase; }
 

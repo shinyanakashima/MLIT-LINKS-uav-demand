@@ -13,46 +13,46 @@
 <div id="app">
   <aside id="sidebar">
     <header class="brand">
-      <h1>測量・インフラ点検 ドローン需要マップ</h1>
-      <p class="sub">無人航空機 飛行計画（申請）データ／市区町村別</p>
+      <div id="lang-switch">
+        <button data-lang="ja" aria-pressed="true">日本語</button>
+        <button data-lang="en" aria-pressed="false">English</button>
+      </div>
+      <h1 data-i18n="brand_h1">測量・インフラ点検 ドローン需要マップ</h1>
+      <p class="sub" data-i18n="brand_sub">無人航空機 飛行計画（申請）データ／市区町村別</p>
     </header>
 
     <div class="section controls">
-      <h2>用途で絞り込む</h2>
+      <h2 data-i18n="sec_filter">用途で絞り込む</h2>
       <div class="seg" id="use-seg">
-        <button class="use" data-use="target" aria-pressed="true"><span class="dot all"></span>全ターゲット用途</button>
-        <button class="use" data-use="survey" aria-pressed="false"><span class="dot survey"></span>測量</button>
-        <button class="use" data-use="infra" aria-pressed="false"><span class="dot infra"></span>インフラ点検・保守</button>
-        <button class="use" data-use="maint" aria-pressed="false"><span class="dot maint"></span>設備メンテナンス</button>
+        <button class="use" data-use="target" aria-pressed="true"><span class="dot all"></span><span data-i18n="use_target">全ターゲット用途</span></button>
+        <button class="use" data-use="survey" aria-pressed="false"><span class="dot survey"></span><span data-i18n="use_survey">測量</span></button>
+        <button class="use" data-use="infra" aria-pressed="false"><span class="dot infra"></span><span data-i18n="use_infra">インフラ点検・保守</span></button>
+        <button class="use" data-use="maint" aria-pressed="false"><span class="dot maint"></span><span data-i18n="use_maint">設備メンテナンス</span></button>
       </div>
       <div class="metric-row">
-        <div class="metric"><div class="num" id="m-records">–</div><div class="lbl">飛行計画 件数（申請）</div></div>
-        <div class="metric"><div class="num" id="m-munis">–</div><div class="lbl">対象 市区町村</div></div>
+        <div class="metric"><div class="num" id="m-records">–</div><div class="lbl" data-i18n="metric_records">飛行計画 件数（申請）</div></div>
+        <div class="metric"><div class="num" id="m-munis">–</div><div class="lbl" data-i18n="metric_munis">対象 市区町村</div></div>
       </div>
     </div>
 
     <div class="section">
-      <h2>都道府県ランキング</h2>
+      <h2 data-i18n="sec_pref">都道府県ランキング</h2>
       <ul class="rank" id="pref-rank"></ul>
     </div>
 
     <div class="section">
-      <h2>市区町村ランキング（上位20）</h2>
+      <h2 data-i18n="sec_muni">市区町村ランキング（上位20）</h2>
       <ul class="rank" id="muni-rank"></ul>
     </div>
 
     <div class="section">
-      <h2>月別推移（申請件数）</h2>
+      <h2 data-i18n="sec_trend">月別推移（申請件数）</h2>
       <div class="trend" id="trend"></div>
     </div>
 
     <footer class="notes">
       <p id="src-note"></p>
-      <div class="disclaimer">
-        本マップは<strong>飛行計画の「申請（通報）」ベース</strong>であり、実際の飛行や実態を表すものではありません。
-        元データは紙資料のスキャン抽出を含むため<strong>完全性・正確性は保証されません</strong>。
-        位置は秘匿化済みの市区町村重心粒度です。個人特定につながる利用はしないでください。
-      </div>
+      <div class="disclaimer" id="disclaimer" data-i18n-html="disclaimer"></div>
       <p id="meta-note" style="margin-top:10px"></p>
     </footer>
   </aside>
@@ -60,28 +60,28 @@
   <div id="map-wrap">
     <div id="map"></div>
     <div id="basemap-switch">
-      <button data-base="std" aria-pressed="true">標準地図</button>
-      <button data-base="photo" aria-pressed="false">衛星写真</button>
+      <button data-base="std" aria-pressed="true" data-i18n="base_std">標準地図</button>
+      <button data-base="photo" aria-pressed="false" data-i18n="base_photo">衛星写真</button>
     </div>
     <div id="detail">
       <button class="close" id="detail-close" aria-label="閉じる">×</button>
       <h3 id="d-name"></h3>
       <div class="pref" id="d-pref"></div>
-      <div class="kv"><span>対象用途 計（申請）</span><b id="d-target"></b></div>
+      <div class="kv"><span data-i18n="d_target">対象用途 計（申請）</span><b id="d-target"></b></div>
       <div class="compo" id="d-compo"></div>
       <div class="legend-min">
-        <span><i style="background:var(--survey)"></i>測量 <b id="d-survey"></b></span>
-        <span><i style="background:var(--infra)"></i>インフラ <b id="d-infra"></b></span>
-        <span><i style="background:var(--maint)"></i>設備 <b id="d-maint"></b></span>
+        <span><i style="background:var(--survey)"></i><span data-i18n="leg_survey">測量</span> <b id="d-survey"></b></span>
+        <span><i style="background:var(--infra)"></i><span data-i18n="leg_infra">インフラ</span> <b id="d-infra"></b></span>
+        <span><i style="background:var(--maint)"></i><span data-i18n="leg_maint">設備</span> <b id="d-maint"></b></span>
       </div>
-      <div class="kv" style="margin-top:8px"><span>目視外（BVLOS）飛行</span><b id="d-bvlos"></b></div>
-      <div class="kv"><span>30m未満飛行</span><b id="d-m30"></b></div>
-      <div class="kv"><span>技能証明 一等 保有</span><b id="d-lic1"></b></div>
-      <div class="kv"><span>技能証明 二等 保有</span><b id="d-lic2"></b></div>
-      <div style="margin-top:10px;font-size:11px;color:var(--muted)">月別（対象用途・申請件数）</div>
+      <div class="kv" style="margin-top:8px"><span data-i18n="d_bvlos">目視外（BVLOS）飛行</span><b id="d-bvlos"></b></div>
+      <div class="kv"><span data-i18n="d_m30">30m未満飛行</span><b id="d-m30"></b></div>
+      <div class="kv"><span data-i18n="d_lic1">技能証明 一等 保有</span><b id="d-lic1"></b></div>
+      <div class="kv"><span data-i18n="d_lic2">技能証明 二等 保有</span><b id="d-lic2"></b></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted)" data-i18n="d_trend_label">月別（対象用途・申請件数）</div>
       <div class="trend" id="d-trend" style="height:48px"></div>
     </div>
-    <div id="loading">データを読み込み中…</div>
+    <div id="loading" data-i18n="loading">データを読み込み中…</div>
   </div>
 </div>
 
