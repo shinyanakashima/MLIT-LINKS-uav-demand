@@ -1,5 +1,12 @@
 # 測量・インフラ点検 ドローン需要マップ
 
+**公開 URL: https://shinyanakashima.github.io/MLIT-LINKS-uav-demand/**
+（GitHub Pages を有効化すると表示されます。手順は [#1](https://github.com/shinyanakashima/MLIT-LINKS-uav-demand/issues/1) を参照）
+
+![アプリのプレビュー](docs/assets/preview.png)
+
+> 上図は画面レイアウトのプレビューです。公開後に実画面のスクリーンショットへ差し替えてください（[#2](https://github.com/shinyanakashima/MLIT-LINKS-uav-demand/issues/2)）。
+
 国土交通省 Project LINKS が公開する **無人航空機 飛行計画データ（2025年度）** をもとに、
 **測量 / インフラ点検・保守 / 設備メンテナンス** を目的としたドローン飛行計画（申請）を
 **市区町村別に集計し、地図上で可視化** する静的 Web サイトです。
@@ -144,5 +151,7 @@ python3 pipeline/build.py --keep     # 生データを削除せず残す
 
 - データ処理: Python（`ijson` でストリーミング解析、`openpyxl` で仕様書参照）
 - フロントエンド: 素の HTML / CSS / JavaScript（ビルド工程なし）
-- 地図: [MapLibre GL JS](https://maplibre.org/) + 地理院タイル（ラスタ）
+- 地図: [MapLibre GL JS](https://maplibre.org/) v4.7.1（BSD-3-Clause）+ 地理院タイル（ラスタ）
+  - MapLibre は CDN ではなく `docs/assets/vendor/` に同梱（外部スクリプト依存なし・自己完結）。
+    地図タイルのみ実行時に地理院サーバーから取得します。
 - 配信: GitHub Pages（静的）
